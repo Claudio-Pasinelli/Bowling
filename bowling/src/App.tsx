@@ -1,98 +1,191 @@
-/* eslint-disable quotes */
-import React, { useState } from 'react';
-import { Button, GameInfo, Tooltip } from './ui/atoms';
-import BowlingPins from './ui/atoms/BowlingPins';
+import React, { useEffect, useState } from 'react';
+import { Button, InfoRound } from './ui/atoms';
 
 function App() {
-  const [frame, setFrame] = useState(1);
-  const [roll, setRoll] = useState(1);
-  const [rollScore, setRollScore] = useState(0);
-  const [frameScore, setFrameScore] = useState(0);
-  const [totalScore, setTotalScore] = useState(0);
+  const [pins, setPins] = useState(10); // numero di birilli in piedi
+  const [roll, setRoll] = useState(1); // numero di tiri
+  const [frame, setFrame] = useState(1); // numero del frame
+  const [frameScore, setFrameScore] = useState(0); // punteggio totale di un frame
 
-  const [strikes, setStrikes] = useState(0);
-  const [spares, setSpares] = useState(0);
+  const [totalScore, setTotalScore] = useState<number>(0); // score/punteggio globale
+  const [totalScores, setTotalScores] = useState<number[]>([]);
+  const [rollScores, setRollScores] = useState<string[]>([]); // array di stringhe che serve per mostrare i punteggi dei singoli roll di un frame (ES: Frame 1: 4 | 5)
 
-  const [showTooltip, setShowTooltip] = useState(false);
+  const [strike, setStrike] = useState(false); // variabile che indica uno stato, quello per lo strike
+  const [spare, setSpare] = useState(false); // variabile che indica uno stato, quello per lo spare
 
-  const [standingPins, setStandingPins] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false); // variabile che serve per disabilitare il bottone Roll una volta finiti tutti i tiri e i frame
 
-  const gameInfo = [
-    { name: 'Frame', quantity: frame },
-    { name: 'Roll', quantity: roll },
-    { name: 'Roll Score', quantity: rollScore },
-    { name: 'Frame Score', quantity: frameScore },
-    { name: 'Total Score', quantity: totalScore },
-    { name: 'Strikes', quantity: strikes },
-    { name: 'Spares', quantity: spares },
-  ];
-
-  const handleRoll = () => {
-    // genero un numero casuale (che arrotondo a intero) che va da 0 a alla lunghezza dell'array standingPins (birilli in piedi)
-    const numberOfKnockedPins = Math.floor(Math.random() * (standingPins.length + 1)); // es: se standingPins.length è 10 il numero sarà tra 0 e 11 (escluso)
-    const knockedPins: number[] = [];
-
-    // ciclo che continua a generare dei numeri unici, casuali e interi che vengono messi nell'array knockedPins
-    while (knockedPins.length < numberOfKnockedPins) {
-      // ottengo un birillo casuale così: arrotondo per intero un numero casuale che va da 0 a 1 moltiplicato per la lunghezza dell'array standingPins,
-      // questo rappresenterà un indice, un indice casuale che rappresenta un birillo in standingPins
-      const randomPin = standingPins[Math.floor(Math.random() * standingPins.length)];
-      if (!knockedPins.includes(randomPin)) {
-        // se l'array knockedPins non contiene il nuovo numero casuale lo deve avere
-        knockedPins.push(randomPin);
-      }
+  // porta al giocatore al prossimo frame tranne nel caso in cui è già al decimo
+  // se al decimo non ho fatto né strike né spare blocco il bottone
+  const handleReset = () => {
+    if (frame < 10) {
+      setFrame((prevFrame) => prevFrame + 1);
+      setRoll(1);
+      setPins(10);
+    } else if (frame === 10 && roll === 2 && !strike && !spare) {
+      setIsButtonDisabled(true);
     }
-
-    setRollScore(numberOfKnockedPins);
-
-    setFrameScore((prevFrameScore) => prevFrameScore + numberOfKnockedPins);
-
-    setTotalScore((prevTotalScore) => prevTotalScore + numberOfKnockedPins);
-
-    // modifico l'array standingPins filtrandolo: vado a rimuovergli tutti i birilli contenuti in knockedPins (scelti a caso con il ciclo while)
-    setStandingPins((prev) => prev.filter((pin) => !knockedPins.includes(pin)));
-    setShowTooltip(true);
   };
 
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-gray-50 p-4 pt-14">
-      {showTooltip && (
-        <Tooltip
-          message={
-            rollScore === 0
-              ? `You didn't knock down any pin!`
-              : rollScore === 10
-                ? 'Strike!'
-                : rollScore === 1
-                  ? `You knocked down ${rollScore} pins!`
-                  : `You knocked down ${rollScore} pin!`
+  // metodo che calcola
+  const handleTotalScore = () => {
+    let value = 0;
+
+    for (let i = 0; i < totalScores.length; i++) {
+      value += totalScores[i];
+    }
+
+    setTotalScore(value);
+  };
+
+  const handleRoll = () => {
+    const randomNumber = Math.floor(Math.random() * (pins + 1)); // Genera un numero casuale tra 0 e i birilli rimasti
+
+    if (roll === 1) {
+      if (randomNumber === 10) {
+        // Strike
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+
+          // Aggiungi bonus per strike precedente
+          if (strike) {
+            updatedTS[updatedTS.length - 1] += 10 + randomNumber; // Somma lo strike con il tiro attuale
           }
-          error={rollScore === 0}
-          onClose={() => setShowTooltip(false)}
+
+          updatedTS.push(10); // Aggiungi lo strike per il frame corrente
+          return updatedTS;
+        });
+
+        setRollScores((prevRS) => [...prevRS, 'X']); // Registra lo strike
+        setStrike(true); // Stato di strike attivo
+        setSpare(false); // Disattiva spare
+
+        if (frame < 10) {
+          handleReset();
+        } else {
+          setRoll(2);
+          setPins(10); // Reset per il secondo tiro del decimo frame
+        }
+      } else {
+        // Primo tiro normale
+        setPins(10 - randomNumber);
+        setRoll(2);
+        setFrameScore(randomNumber);
+
+        if (spare) {
+          // Bonus per spare precedente
+          setTotalScores((prevTS) => {
+            const updatedTS = [...prevTS];
+            updatedTS[updatedTS.length - 1] += randomNumber;
+            return updatedTS;
+          });
+        }
+
+        setTotalScores((prevTS) => [...prevTS, randomNumber]);
+        setRollScores((prevRS) => [...prevRS, randomNumber.toString()]);
+      }
+    } else if (roll === 2) {
+      const totalForFrame = randomNumber + frameScore;
+
+      if (totalForFrame === 10) {
+        // Spare
+        setSpare(true);
+        setStrike(false);
+
+        if (frame < 10) {
+          setTotalScores((prevTS) => {
+            const updatedTS = [...prevTS];
+            updatedTS[updatedTS.length - 1] = 10; // Spare vale 10
+            return updatedTS;
+          });
+
+          setRollScores((prevRS) => {
+            const updatedRS = [...prevRS];
+            updatedRS[updatedRS.length - 1] = `${frameScore} | /`;
+            return updatedRS;
+          });
+
+          handleReset();
+        } else {
+          // Spare nel decimo frame
+          setRollScores((prevRS) => {
+            const updatedRS = [...prevRS];
+            updatedRS[updatedRS.length - 1] = `${frameScore} | /`;
+            return updatedRS;
+          });
+
+          setRoll(3); // Tiro bonus
+          setPins(10); // Reset per il tiro bonus
+        }
+      } else {
+        // Open frame o secondo tiro
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+          updatedTS[updatedTS.length - 1] += randomNumber;
+
+          // Bonus per strike precedente
+          if (strike) {
+            updatedTS[updatedTS.length - 2] += randomNumber + frameScore; // Somma i due tiri al frame precedente
+            setStrike(false);
+          }
+
+          return updatedTS;
+        });
+
+        setRollScores((prevRS) => {
+          const updatedRS = [...prevRS];
+          updatedRS[updatedRS.length - 1] = `${frameScore} | ${randomNumber}`;
+          return updatedRS;
+        });
+
+        if (frame === 10) {
+          setIsButtonDisabled(true); // Fine partita
+        } else {
+          handleReset();
+        }
+
+        setSpare(false);
+      }
+    } else if (roll === 3) {
+      // Tiro bonus nel decimo frame
+      setTotalScores((prevTS) => {
+        const updatedTS = [...prevTS];
+        updatedTS[updatedTS.length - 1] += randomNumber;
+        return updatedTS;
+      });
+
+      setRollScores((prevRS) => {
+        const updatedRS = [...prevRS];
+        updatedRS[updatedRS.length - 1] += ` | ${randomNumber}`; // Aggiungi tiro bonus
+        return updatedRS;
+      });
+
+      setIsButtonDisabled(true); // Disabilita il bottone
+    }
+  };
+
+  // lo useEffect osserva i cambiamenti dell'array totalScores e, ad ogni modifica, calcola lo score/punteggio globale che verrà mostrato nell'<h1> sottostante
+  useEffect(() => {
+    handleTotalScore();
+  }, [totalScores]);
+
+  return (
+    <div className="flex size-full items-center justify-around">
+      <div>
+        <h1 className="mb-4">Punteggio Totale: {totalScore}</h1>
+
+        <Button
+          text="Roll"
+          title="Roll the ball"
+          backgroundColor="bg-gray-300"
+          textColor="text-black"
+          disabled={isButtonDisabled}
+          onClick={handleRoll}
         />
-      )}
-      <div className="flex h-full w-full max-w-lg flex-col items-center justify-between">
-        <GameInfo data={gameInfo} />
-        <div className="relative flex h-96 w-full border-x-2 border-t-2 border-black">
-          <div className="absolute left-0 top-0 flex h-1/2 w-full items-center justify-center">
-            <BowlingPins standingPins={standingPins} />
-          </div>
-
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2">
-            <div className="h-10 w-10 rounded-full bg-lightblue-50 shadow-md"></div>
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <Button
-            text="Roll"
-            title="Roll the ball"
-            backgroundColor="bg-gray-200"
-            textColor="black"
-            onClick={handleRoll}
-          />
-        </div>
       </div>
+
+      <InfoRound frames={totalScores} rollScores={rollScores} />
     </div>
   );
 }
