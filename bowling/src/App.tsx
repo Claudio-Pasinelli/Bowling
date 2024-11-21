@@ -8,7 +8,7 @@ function App() {
   const [frameScore, setFrameScore] = useState(0); // punteggio totale di un frame
 
   const [totalScore, setTotalScore] = useState<number>(0); // score/punteggio globale
-  const [totalScores, setTotalScores] = useState<number[]>([]);
+  const [totalScores, setTotalScores] = useState<number[]>([]); // array che contiene i punteggi di ogni frame
   const [rollScores, setRollScores] = useState<string[]>([]); // array di stringhe che serve per mostrare i punteggi dei singoli roll di un frame (ES: Frame 1: 4 | 5)
 
   const [strike, setStrike] = useState(false); // variabile che indica uno stato, quello per lo strike
@@ -43,6 +43,15 @@ function App() {
     const randomNumber = Math.floor(Math.random() * (pins + 1)); // Genera un numero casuale tra 0 e i birilli rimasti
 
     if (roll === 1) {
+      if (spare) {
+        // Bonus per spare precedente
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+          updatedTS[updatedTS.length - 1] = 10 + randomNumber;
+          return updatedTS;
+        });
+      }
+
       if (randomNumber === 10) {
         // Strike
         setTotalScores((prevTS) => {
@@ -72,15 +81,6 @@ function App() {
         setPins(10 - randomNumber);
         setRoll(2);
         setFrameScore(randomNumber);
-
-        if (spare) {
-          // Bonus per spare precedente
-          setTotalScores((prevTS) => {
-            const updatedTS = [...prevTS];
-            updatedTS[updatedTS.length - 1] += randomNumber;
-            return updatedTS;
-          });
-        }
 
         setTotalScores((prevTS) => [...prevTS, randomNumber]);
         setRollScores((prevRS) => [...prevRS, randomNumber.toString()]);
@@ -120,19 +120,6 @@ function App() {
         }
       } else {
         // Open frame o secondo tiro
-        setTotalScores((prevTS) => {
-          const updatedTS = [...prevTS];
-          updatedTS[updatedTS.length - 1] += randomNumber;
-
-          // Bonus per strike precedente
-          if (strike) {
-            updatedTS[updatedTS.length - 2] += randomNumber + frameScore; // Somma i due tiri al frame precedente
-            setStrike(false);
-          }
-
-          return updatedTS;
-        });
-
         setRollScores((prevRS) => {
           const updatedRS = [...prevRS];
           updatedRS[updatedRS.length - 1] = `${frameScore} | ${randomNumber}`;
@@ -146,6 +133,21 @@ function App() {
         }
 
         setSpare(false);
+      }
+
+      if (strike) {
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+
+          updatedTS[updatedTS.length - 1] += randomNumber;
+
+          // Bonus per strike precedente
+
+          updatedTS[updatedTS.length - 2] += randomNumber + frameScore; // Somma i due tiri al frame precedente
+          setStrike(false);
+
+          return updatedTS;
+        });
       }
     } else if (roll === 3) {
       // Tiro bonus nel decimo frame
