@@ -47,7 +47,7 @@ function App() {
         // Bonus per spare precedente
         setTotalScores((prevTS) => {
           const updatedTS = [...prevTS];
-          updatedTS[updatedTS.length - 1] = 10 + randomNumber;
+          updatedTS[updatedTS.length - 1] += randomNumber;
           return updatedTS;
         });
       }
