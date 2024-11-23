@@ -27,6 +27,7 @@ function App() {
 
       setTimeout(() => {
         setStandingPins([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        setIsButtonDisabled(false);
       }, 1500);
     } else if (frame === 10 && roll === 2 && !strike && !spare) {
       setIsButtonDisabled(true);
@@ -45,6 +46,8 @@ function App() {
   };
 
   const handleRoll = () => {
+    setIsButtonDisabled(true);
+
     const randomNumber = Math.floor(Math.random() * (pins + 1)); // Genera un numero casuale tra 0 e i birilli rimasti
 
     setStandingPins((prevKnockedPins) => {
@@ -89,6 +92,7 @@ function App() {
         } else {
           setRoll(2);
           setPins(10); // Reset per il secondo tiro del decimo frame
+          setIsButtonDisabled(false);
         }
       } else {
         // Primo tiro normale
@@ -98,6 +102,8 @@ function App() {
 
         setTotalScores((prevTS) => [...prevTS, randomNumber]);
         setRollScores((prevRS) => [...prevRS, randomNumber.toString()]);
+
+        setIsButtonDisabled(false);
       }
     } else if (roll === 2) {
       const totalForFrame = randomNumber + frameScore;
@@ -131,6 +137,7 @@ function App() {
 
           setRoll(3); // Tiro bonus
           setPins(10); // Reset per il tiro bonus
+          setIsButtonDisabled(false);
         }
       } else {
         // Open frame o secondo tiro
@@ -204,10 +211,7 @@ function App() {
       <div className="flex size-1/4 flex-col border-x-2 border-t-2 border-black">
         <BowlingPins standingPins={standingPins} />
         <div className="flex size-full items-end justify-center">
-          <div
-            className="size-8 cursor-pointer rounded-full bg-lightblue-100"
-            title="Roll the Ball"
-            onClick={handleRoll}></div>
+          <div className="size-8 cursor-pointer rounded-full bg-lightblue-100"></div>
         </div>
       </div>
 
