@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, InfoRound } from './ui/atoms';
+import { BowlingPins, Button, InfoRound } from './ui';
 
 function App() {
   const [pins, setPins] = useState(10); // numero di birilli in piedi
@@ -10,6 +10,7 @@ function App() {
   const [totalScore, setTotalScore] = useState<number>(0); // score/punteggio globale
   const [totalScores, setTotalScores] = useState<number[]>([]); // array che contiene i punteggi di ogni frame
   const [rollScores, setRollScores] = useState<string[]>([]); // array di stringhe che serve per mostrare i punteggi dei singoli roll di un frame (ES: Frame 1: 4 | 5)
+  const [standingPins, setStandingPins] = useState<number[]>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); // array di numeri che contiene i birilli che sono in piedi
 
   const [strike, setStrike] = useState(false); // variabile che indica uno stato, quello per lo strike
   const [spare, setSpare] = useState(false); // variabile che indica uno stato, quello per lo spare
@@ -23,6 +24,10 @@ function App() {
       setFrame((prevFrame) => prevFrame + 1);
       setRoll(1);
       setPins(10);
+
+      setTimeout(() => {
+        setStandingPins([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      }, 1500);
     } else if (frame === 10 && roll === 2 && !strike && !spare) {
       setIsButtonDisabled(true);
     }
@@ -41,6 +46,15 @@ function App() {
 
   const handleRoll = () => {
     const randomNumber = Math.floor(Math.random() * (pins + 1)); // Genera un numero casuale tra 0 e i birilli rimasti
+
+    setStandingPins((prevKnockedPins) => {
+      const remainingPins = [...prevKnockedPins];
+      for (let i = 0; i < randomNumber; i++) {
+        const index = Math.floor(Math.random() * remainingPins.length); // Seleziona un birillo casuale
+        remainingPins.splice(index, 1); // Rimuovilo dall'array
+      }
+      return remainingPins;
+    });
 
     if (roll === 1) {
       if (spare) {
@@ -185,6 +199,16 @@ function App() {
           disabled={isButtonDisabled}
           onClick={handleRoll}
         />
+      </div>
+
+      <div className="flex size-1/4 flex-col border-x-2 border-t-2 border-black">
+        <BowlingPins standingPins={standingPins} />
+        <div className="flex size-full items-end justify-center">
+          <div
+            className="size-8 cursor-pointer rounded-full bg-lightblue-100"
+            title="Roll the Ball"
+            onClick={handleRoll}></div>
+        </div>
       </div>
 
       <InfoRound frames={totalScores} rollScores={rollScores} />
