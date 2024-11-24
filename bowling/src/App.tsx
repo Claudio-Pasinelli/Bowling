@@ -76,7 +76,7 @@ function App() {
 
           // Aggiungi bonus per strike precedente
           if (strike) {
-            updatedTS[updatedTS.length - 1] += 10 + randomNumber; // Somma lo strike con il tiro attuale
+            updatedTS[updatedTS.length - 1] += randomNumber; // Somma lo strike con il tiro attuale
           }
 
           updatedTS.push(10); // Aggiungi lo strike per il frame corrente
@@ -108,38 +108,50 @@ function App() {
     } else if (roll === 2) {
       const totalForFrame = randomNumber + frameScore;
 
+      if (strike) {
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+
+          // Bonus per strike precedente
+
+          updatedTS[updatedTS.length - 2] += totalForFrame; // Somma i due tiri al frame precedente
+
+          return updatedTS;
+        });
+      }
+
+      setStrike(false);
+
       if (totalForFrame === 10) {
         // Spare
         setSpare(true);
-        setStrike(false);
+
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+          updatedTS[updatedTS.length - 1] = 10; // Spare vale 10
+          return updatedTS;
+        });
+
+        setRollScores((prevRS) => {
+          const updatedRS = [...prevRS];
+          updatedRS[updatedRS.length - 1] = `${frameScore} | /`;
+          return updatedRS;
+        });
 
         if (frame < 10) {
-          setTotalScores((prevTS) => {
-            const updatedTS = [...prevTS];
-            updatedTS[updatedTS.length - 1] = 10; // Spare vale 10
-            return updatedTS;
-          });
-
-          setRollScores((prevRS) => {
-            const updatedRS = [...prevRS];
-            updatedRS[updatedRS.length - 1] = `${frameScore} | /`;
-            return updatedRS;
-          });
-
           handleReset();
         } else {
           // Spare nel decimo frame
-          setRollScores((prevRS) => {
-            const updatedRS = [...prevRS];
-            updatedRS[updatedRS.length - 1] = `${frameScore} | /`;
-            return updatedRS;
-          });
-
           setRoll(3); // Tiro bonus
           setPins(10); // Reset per il tiro bonus
           setIsButtonDisabled(false);
         }
       } else {
+        setTotalScores((prevTS) => {
+          const updatedTS = [...prevTS];
+          updatedTS[updatedTS.length - 1] += randomNumber;
+          return updatedTS;
+        });
         // Open frame o secondo tiro
         setRollScores((prevRS) => {
           const updatedRS = [...prevRS];
@@ -154,21 +166,6 @@ function App() {
         }
 
         setSpare(false);
-      }
-
-      if (strike) {
-        setTotalScores((prevTS) => {
-          const updatedTS = [...prevTS];
-
-          updatedTS[updatedTS.length - 1] += randomNumber;
-
-          // Bonus per strike precedente
-
-          updatedTS[updatedTS.length - 2] += randomNumber + frameScore; // Somma i due tiri al frame precedente
-          setStrike(false);
-
-          return updatedTS;
-        });
       }
     } else if (roll === 3) {
       // Tiro bonus nel decimo frame
@@ -200,9 +197,10 @@ function App() {
 
         <Button
           text="Roll"
-          title="Roll the ball"
+          title={isButtonDisabled ? 'You have finished!' : 'Roll the ball'}
           backgroundColor="bg-gray-300"
           textColor="text-black"
+          className={isButtonDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}
           disabled={isButtonDisabled}
           onClick={handleRoll}
         />
